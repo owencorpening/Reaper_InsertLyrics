@@ -53,36 +53,46 @@ function insert_lyrics(whisper_data)
         return
     end
 
-    reaper.ShowConsoleMsg("Inserting lyrics...\n")
+    reaper.ShowConsoleMsg("Inserting formatted lyrics...\n")
     reaper.Undo_BeginBlock()
 
-    -- Iterate over each transcription entry
+    -- Iterate through transcription entries
     for i, entry in ipairs(whisper_data.transcription) do
         local lyric = entry["text"]
         local start = entry["offsets"]["from"] / 1000  -- Convert ms to seconds
         local _end = entry["offsets"]["to"] / 1000
 
-        reaper.ShowConsoleMsg(string.format("Processing entry %d: start=%.3f, end=%.3f\n", i, start, _end))
-        
+        -- Get next lyric line for preview (if available)
+        local next_lyric = ""
+        if i < #whisper_data.transcription then
+            next_lyric = whisper_data.transcription[i + 1]["text"]
+        end
+
+        -- Format lyrics using HTML
+        local formatted_lyrics = string.format(
+            "<h1>%s</h1><h3 style='color:yellow'>%s</h3>",
+            lyric, next_lyric
+        )
+
+        -- Insert media item into "Lyrics" track
         if lyric and lyric:match("%S") then  -- Skip empty lyrics
             local item = reaper.AddMediaItemToTrack(track)
             reaper.SetMediaItemInfo_Value(item, "D_POSITION", start)
             reaper.SetMediaItemInfo_Value(item, "D_LENGTH", _end - start)
-            
+
             local take = reaper.AddTakeToMediaItem(item)
             if take then
-                reaper.ULT_SetMediaItemNote(item, lyric)
+                -- Apply formatted lyrics
+                reaper.ULT_SetMediaItemNote(item, formatted_lyrics)
             else
                 reaper.ShowConsoleMsg("Warning: Could not add take for entry " .. i .. "\n")
             end
-        else
-            reaper.ShowConsoleMsg("Skipping empty lyric at entry " .. i .. "\n")
         end
     end
 
-    reaper.Undo_EndBlock("Insert Lyrics", -1)
-    reaper.ShowConsoleMsg("Finished inserting lyrics.\n")
-end
+    reaper.Undo_EndBlock("Insert Formatted Lyrics", -1)
+    reaper.ShowConsoleMsg("Finished 
+
 
 -- Ask user to select the Whisper JSON file
 local ret_val, file_path = reaper.GetUserFileNameForRead("", "Select Whisper JSON File", "*.json")
